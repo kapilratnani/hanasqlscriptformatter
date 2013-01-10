@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            name="Default Category"
+            id="HANASQLScriptFormatter.commands.category">
+      </category>
+      <command
+            name="Format HANA SQL Script"
+            categoryId="HANASQLScriptFormatter.commands.category"
+            id="HANASQLScriptFormatter.commands.formatsqlscript">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            commandId="HANASQLScriptFormatter.commands.formatsqlscript"
+            class="net.ripper.hana.sqlscriptformatter.handlers.CommandHandler">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="HANASQLScriptFormatter.commands.formatsqlscript"
+            contextId="org.eclipse.ui.contexts.window"
+            sequence="M1+6"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
+      </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <!--
+      <menuContribution
+            locationURI="menu:org.eclipse.ui.main.menu">
+            <command
+                  commandId="HANASQLScriptFormatter.commands.formatsqlscript"
+                  id="HANASQLScriptFormatter.menus.formatsqlscript"
+                  style="push">
+            </command>
+      </menuContribution>
+      -->
+      <menuContribution
+            locationURI="toolbar:org.eclipse.ui.main.toolbar">
+         <toolbar
+               id="HANASQLScriptFormatter.toolbars.sampleToolbar">
+            <command
+                  commandId="HANASQLScriptFormatter.commands.formatsqlscript"
+                  icon="icons/icon.png"
+                  tooltip="Format HANA SQL Script"
+                  id="HANASQLScriptFormatter.toolbars.formatsqlscript">
+            </command>
+         </toolbar>
+      </menuContribution>
+   </extension>
+
+</plugin>
