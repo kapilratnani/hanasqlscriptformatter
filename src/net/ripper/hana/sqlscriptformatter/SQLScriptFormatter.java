@@ -10,6 +10,54 @@ import net.whiteants.util.SQLFormatter;
 
 public class SQLScriptFormatter {
 
+	static String test3 = "create procedure collections_hierarchy.add_child(\n"
+			+ "    in parent_id varchar(30),\n"
+			+ "    in child_id varchar(30) \n"
+			+ ") language sqlscript as\n"
+			+ "     username varchar(100);\n"
+			+ "     role varchar(30);\n"
+			+ "begin\n"
+			+ "/*This will throw no data found exception if users don't exist*/\n"
+			+ "/*check if child id exists*/\n"
+			+ "    select\n"
+			+ "        username \n"
+			+ "    into\n"
+			+ "        username \n"
+			+ "    from\n"
+			+ "        collections.cm_user \n"
+			+ "    where\n"
+			+ "        username  =  :child_id;\n"
+			+ "/*check if parent id exists*/\n"
+			+ "    select\n"
+			+ "        username \n"
+			+ "    into\n"
+			+ "        username \n"
+			+ "    from\n"
+			+ "        collections.cm_user \n"
+			+ "    where\n"
+			+ "        username  =  :parent_id;\n"
+			+ "/*check if parent is a manager*/\n"
+			+ "    select\n"
+			+ "        role_name \n"
+			+ "    into\n"
+			+ "        role \n"
+			+ "    from\n"
+			+ "        \"sys\".\"granted_roles\"\n"
+			+ "    where\n"
+			+ "        grantee  =  :parent_id \n"
+			+ "        and role_name  =  'cm_collman';\n"
+			+ "        \n"
+			+ "    insert \n"
+			+ "    into\n"
+			+ "        collections_hierarchy.hierarchy\n"
+			+ "        select\n"
+			+ "           ancestor,  :child_id as descendent,  depth+1 as depth \n"
+			+ "        from\n"
+			+ "            collections_hierarchy.hierarchy \n"
+			+ "        where\n" + "            descendent  =  :parent_id \n"
+			+ "        union\n" + "        select\n"
+			+ "            :child_id,  :child_id,  0 \n" + "        from\n"
+			+ "            dummy;\n" + "end;";
 	static String test2 = "create procedure collections.proc_mgr_assign_customers2(\n"
 			+ "		in in_system_id varchar(5),\n"
 			+ "	 	in in_client varchar(3),\n"
@@ -129,284 +177,318 @@ public class SQLScriptFormatter {
 			+ "						from collections.cm_dummy;\n"
 			+ "	 \n"
 			+ "	end if; \n"
-			+ "\n" + "end;\n" + "";
-	static String testSql = "create procedure collections.proc_mgr_get_assignment_overview2 ( in in_system varchar (5),\n"
-			+ "	 in in_client varchar (3),\n"
-			+ "	 in in_company varchar (4),\n"
-			+ "	 in in_date timestamp,\n"
-			+ "	 out out_manager_overview collections.tt_manager_assignment_overview ) sql security invoker as \n"
-			+ "\n"
-			+ "assigned_customers integer := 0 \n"
-			+ ";\n"
-			+ "unassigned_customers integer := 0 \n"
-			+ "; \n"
-			+ "assistance_list integer := 0 \n"
-			+ ";\n"
-			+ "total_outstanding double := 0 \n"
-			+ ";\n"
-			+ "promise_to_pay double := 0 \n"
-			+ ";\n"
-			+ "local_currency varchar (5) := '' \n"
-			+ ";\n"
-			+ "user_full_name varchar (256) \n"
-			+ ";\n"
-			+ "count_var integer := 0 \n"
-			+ "; \n"
-			+ " \n"
-			+ "begin \n"
-			+ "/*\n"
-			+ "	Modified to show only asssigned customers\n"
-			+ "*/\n"
-			+ "customers_under_manager = select\n"
-			+ "	 customer \n"
-			+ "from collections.cm_specialist_customer_assignment \n"
-			+ "where system_id = :in_system \n"
-			+ "and client = :in_client \n"
-			+ "and company = :in_company \n"
-			+ "and user_name=current_user \n"
-			+ ";\n"
-			+ "\n"
-			+ "/*\n"
-			+ "	get manager's subordinates\n"
-			+ "*/\n"
-			+ "call collections_hierarchy.expand_hierarchy_from(current_user,1,htree);\n"
-			+ "sub_list=select user_id from :htree where hlevel=1;\n"
-			+ "\n"
-			+ "customers_assigned_by_manager = select\n"
-			+ "	 customer \n"
-			+ "from collections.cm_specialist_customer_assignment, :sub_list as subs \n"
-			+ "where system_id = :in_system \n"
-			+ "and client = :in_client \n"
-			+ "and company = :in_company \n"
-			+ "and user_name=subs.user_id;\n"
-			+ "\n"
-			+ "/*\n"
-			+ " select\n"
-			+ "	 count (distinct customer) \n"
-			+ "into unassigned_customers \n"
-			+ "from ( select\n"
-			+ "	 customer \n"
-			+ "	from :customers_under_manager minus select\n"
-			+ "	 customer \n"
-			+ "	from :customers_assigned_by_manager ) \n"
-			+ ";\n"
-			+ "\n"
-			+ " select\n"
-			+ "	 count (distinct customer) \n"
-			+ "into assigned_customers \n"
-			+ "from :customers_assigned_by_manager \n"
-			+ "where customer is not null \n"
-			+ ";\n"
-			+ "*/\n"
-			+ " assigned_invoices_with_outcomes = select\n"
-			+ "	 imap.system_id,\n"
-			+ "	 imap.client,\n"
-			+ "	 imap.customer,\n"
-			+ "	 imap.invoice,\n"
-			+ "	 imap.invoice_year,\n"
-			+ "	 outcome.outcome_guid,\n"
-			+ "	 outcome.created_at \n"
-			+ "from collections.cm_outcome_invoice_mapping as imap \n"
-			+ "inner join :customers_assigned_by_manager assign on imap.customer = assign.customer \n"
-			+ "inner join collections.cm_call_outcomes as outcome on imap.outcome_guid = outcome.outcome_guid \n"
-			+ "where imap.system_id = :in_system \n"
-			+ "and imap.client = :in_client \n"
-			+ "and outcome.action_code <> '1' \n"
-			+ ";\n"
-			+ "\n"
-			+ "last_outcome_created_at = select\n"
-			+ "	 system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer,\n"
-			+ "	 invoice,\n"
-			+ "	 invoice_year,\n"
-			+ "	 max (created_at) as created_at \n"
-			+ "from :assigned_invoices_with_outcomes \n"
-			+ "group by system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer,\n"
-			+ "	 invoice,\n"
-			+ "	 invoice_year \n"
-			+ ";\n"
-			+ " select\n"
-			+ "	 count (distinct outcome.customer) \n"
-			+ "into assistance_list \n"
-			+ "from collections.cm_call_outcomes as outcome \n"
-			+ "inner join :last_outcome_created_at as last_outcome on outcome.system_id = last_outcome.system_id \n"
-			+ "and outcome.client = last_outcome.client \n"
-			+ "and outcome.customer = last_outcome.customer \n"
-			+ "where outcome.action_code <> '1' \n"
-			+ ";\n"
-			+ " customer_invoice_list= select\n"
-			+ "	 bsid.system_id as system_id,\n"
-			+ "	 bsid.mandt as client,\n"
-			+ "	 ifnull (bsid.vbeln,\n"
-			+ "	 bsid.belnr) as invoice_number,\n"
-			+ "	 bsid.belnr as fin_doc_number,\n"
-			+ "	 bkpf.bukrs as company_code,\n"
-			+ "	 bsid.gjahr as \"YEAR\",\n"
-			+ "	 bsid.kunnr as customer,\n"
-			+ "	 days_between (bkpf.budat,\n"
-			+ "	current_date) as days_open,\n"
-			+ "	 CASE WHEN BSID.shkzg = 'S' \n"
-			+ "THEN bsid.dmbtr \n"
-			+ "ELSE (-1) * bsid.dmbtr \n"
-			+ "END as outstanding_amount,\n"
-			+ "	 t001.waers as local_currency,\n"
-			+ "	 madat as last_dunned,\n"
-			+ "	 manst as highest_dunning,\n"
-			+ "	 current_date as reporting_date \n"
-			+ "FROM \"COLLECTIONS\".\"BKPF\" bkpf \n"
-			+ "INNER JOIN \"COLLECTIONS\".\"BSID\" bsid ON bsid.system_id = bkpf.system_id \n"
-			+ "AND bsid.mandt = bkpf.mandt \n"
-			+ "AND bsid.bukrs = bkpf.bukrs \n"
-			+ "AND bsid.belnr = bkpf.belnr \n"
-			+ "AND bsid.gjahr = bkpf.gjahr \n"
-			+ "inner join COLLECTIONS.CM_SPECIALIST_CUSTOMER_ASSIGNMENT comp on bkpf.bukrs = comp.company \n"
-			+ "and bkpf.system_id = comp.system_id \n"
-			+ "AND bkpf.mandt = comp.client \n"
-			+ "and bsid.kunnr = comp.customer \n"
-			+ "INNER JOIN \"COLLECTIONS\".\"T001\" t001 on bkpf.system_id = t001.system_id \n"
-			+ "AND bkpf.mandt = t001.mandt \n"
-			+ "AND bkpf.bukrs = t001.bukrs \n"
-			+ "WHERE --shkzg = 'S' and\n"
-			+ " comp.user_name = current_user \n"
-			+ "and comp.system_id = :in_system \n"
-			+ "and comp.client = :in_client \n"
-			+ "and comp.company = :in_company \n"
-			+ "; 	\n"
-			+ " customer_outstanding = select\n"
-			+ "	 system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer,\n"
-			+ "	 sum(outstanding_amount) \n"
-			+ "from :customer_invoice_list \n"
-			+ "group by system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer having sum(outstanding_amount) > 0 \n"
-			+ ";\n"
-			+ " select\n"
-			+ "	 count(distinct customer) \n"
-			+ "into assigned_customers \n"
-			+ "from ( select\n"
-			+ "	 distinct customer \n"
-			+ "	from :customer_outstanding intersect ( select\n"
-			+ "	 customer \n"
-			+ "		from :customers_assigned_by_manager intersect select\n"
-			+ "	 distinct customer \n"
-			+ "		from :customers_under_manager ) )\n"
-			+ ";\n"
-			+ " select\n"
-			+ "	 count(distinct customer) \n"
-			+ "into unassigned_customers \n"
-			+ "from ( select\n"
-			+ "	 distinct customer \n"
-			+ "	from :customer_outstanding intersect ( select\n"
-			+ "	 customer \n"
-			+ "		from :customers_under_manager minus select\n"
-			+ "	 customer \n"
-			+ "		from :customers_assigned_by_manager ) )\n"
-			+ ";\n"
-			+ "/*\n"
-			+ " select\n"
-			+ "	 customer \n"
-			+ "from :customers_under_manager minus select\n"
-			+ "	 customer \n"
-			+ "from :customers_assigned_by_manager\n"
-			+ ";\n"
-			+ "*/\n"
-			+ " select\n"
-			+ "	 ifnull (sum (outstanding_amount),\n"
-			+ "	0 ) \n"
-			+ "into total_outstanding \n"
-			+ "from :customer_invoice_list \n"
-			+ ";\n"
-			+ " /* select\n"
-			+ "	 ifnull (sum (outcome.promise_to_pay),\n"
-			+ "	0 ) \n"
-			+ "into promise_to_pay \n"
-			+ "from collections.cm_call_outcomes as outcome \n"
-			+ "inner join :customers_assigned_by_manager assign on outcome.customer = assign.customer \n"
-			+ "where outcome.system_id = :in_system \n"
-			+ "and outcome.client = :in_client \n"
-			+ "and by_when >= to_date (:in_date) \n"
-			+ ";\n"
-			+ " */ \n"
-			+ " specialists_customers_and_invoices = select\n"
-			+ "	 system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer,\n"
-			+ "	 fin_doc_number,\n"
-			+ "	 \"YEAR\" \n"
-			+ "from :customer_invoice_list \n"
-			+ "group by system_id,\n"
-			+ "	 client,\n"
-			+ "	 customer,\n"
-			+ "	 fin_doc_number,\n"
-			+ "	 \"YEAR\" \n"
-			+ ";\n"
-			+ " promise_to_pays = select\n"
-			+ "	 inv.system_id,\n"
-			+ "	 inv.client,\n"
-			+ "	 outcome.promise_to_pay \n"
-			+ "from :specialists_customers_and_invoices as inv \n"
-			+ "inner join collections.cm_outcome_invoice_mapping as imap on inv.system_id = imap.system_id \n"
-			+ "and inv.client = imap.client \n"
-			+ "and inv.customer = imap.customer \n"
-			+ "and inv.fin_doc_number = imap.invoice \n"
-			+ "and inv.\"YEAR\" = imap.invoice_year \n"
-			+ "inner join collections.cm_call_outcomes as outcome on imap.outcome_guid = outcome.outcome_guid \n"
-			+ "where by_when >= to_date (:in_date) \n"
-			+ ";\n"
-			+ " select\n"
-			+ "	 ifnull (sum (promise_to_pay),\n"
-			+ "	0 ) \n"
-			+ "into promise_to_pay \n"
-			+ "from :promise_to_pays \n"
-			+ ";\n"
-			+ " --select count(*) into promise_to_pay  from :customer_invoice_list;\n"
-			+ " select\n"
-			+ "	 top 1 waers \n"
-			+ "into local_currency \n"
-			+ "from collections.t001 \n"
-			+ "where system_id = :in_system \n"
-			+ "and mandt = :in_client \n"
-			+ "and bukrs = :in_company \n"
-			+ ";\n"
-			+ " select\n"
-			+ "	 count (*) \n"
-			+ "into count_var \n"
-			+ "from collections.cm_user \n"
-			+ "where username = current_user \n"
-			+ ";\n"
-			+ " \n"
-			+ "if (count_var > 0 ) \n"
-			+ "then select\n"
-			+ "	 first_name||' '|| last_name \n"
-			+ "into user_full_name \n"
-			+ "from collections.cm_user \n"
-			+ "where username = current_user \n"
-			+ ";\n"
-			+ " \n"
-			+ "else if a==b then user_full_name := current_user \n"
-			+ ";\n"
-			+ " \n"
-			+ "end \n"
-			+ "if \n"
-			+ "; \n"
-			+ " out_manager_overview = select\n"
-			+ "	 :in_system as system_id,\n"
-			+ "	 :in_client as client,\n"
-			+ "	 :in_company as company,\n"
-			+ "	 :unassigned_customers as unassigned_customers,\n"
-			+ "	 :assigned_customers as assigned_customers,\n"
-			+ "	 :assistance_list as assist_count,\n"
-			+ "	 :total_outstanding as due,\n"
-			+ "	 :promise_to_pay as collected,\n"
-			+ "	 :local_currency as local_currency,\n"
-			+ "	 :user_full_name as user_name \n"
-			+ "from collections.cm_dummy \n" + ";		\n" + " \n" + "end;\n";
-
+			+ "\n" + "end;";
+	static String test1 = "drop procedure collections.proc_mgr_get_all_customers_summary2;\n" + 
+			"create procedure collections.proc_mgr_get_all_customers_summary2 (\n" + 
+			"    in in_system_id varchar (5),\n" + 
+			"    in in_client varchar (3),\n" + 
+			"    in in_company varchar (4),\n" + 
+			"    in in_language varchar (1),\n" + 
+			"    out out_customer_summary_list collections.tt_mgr_customer_summary \n" + 
+			") sql security invoker as\n" + 
+			"begin\n" + 
+			"/*\n" + 
+			"	Modified to only show customers which are assigned to the manager\n" + 
+			"*/\n" + 
+			"    call collections.proc_customer_contact_address_data_with_client_system (:in_language,  :in_system_id,  :in_client,  kna) ;\n" + 
+			"\n" + 
+			"    address  =  select\n" + 
+			"                    kna.system_id,  kna.client,  kna.customer,  kna.\"customer_name\",  kna.\"telephone_number\",  kna.\"city\",  kna.\"region\",  kna.\"country\" \n" + 
+			"                from\n" + 
+			"                    :kna as kna ;\n" + 
+			"                    \n" + 
+			"\n" + 
+			"    call collections_hierarchy.expand_hierarchy_from(current_user,1,h_tree);\n" + 
+			"\n" + 
+			"    sub_list  =  select\n" + 
+			"                        user_id \n" + 
+			"                    from\n" + 
+			"                        :h_tree \n" + 
+			"                    where\n" + 
+			"                        hlevel  =  1;\n" + 
+			"\n" + 
+			"/*\n" + 
+			"	get all assignments to manager,\n" + 
+			"	as well as to whom the manager has assigned\n" + 
+			"*/\n" + 
+			"/*\n" + 
+			"assignment_list = select\n" + 
+			"	 mgr_asmnt.system_id,\n" + 
+			"	 mgr_asmnt.client,\n" + 
+			"	 mgr_asmnt.company,\n" + 
+			"	 mgr_asmnt.customer,\n" + 
+			"	 mgr_asmnt.user_name as manager_name,\n" + 
+			"	 spl_asmnt.user_name as specialist_name \n" + 
+			"from COLLECTIONS.CM_SPECIALIST_CUSTOMER_ASSIGNMENT as mgr_asmnt\n" + 
+			"left outer join COLLECTIONS.CM_SPECIALIST_CUSTOMER_ASSIGNMENT as spl_asmnt on\n" + 
+			"				mgr_asmnt.system_id=spl_asmnt.system_id and\n" + 
+			"				mgr_asmnt.client=spl_asmnt.client and\n" + 
+			"				mgr_asmnt.company=spl_asmnt.company and\n" + 
+			"				mgr_asmnt.customer=spl_asmnt.customer and\n" + 
+			"				mgr_asmnt.user_name<>spl_asmnt.user_name\n" + 
+			"where mgr_asmnt.system_id=:in_system_id and mgr_asmnt.client=:in_client and mgr_asmnt.user_name=current_user;							 \n" + 
+			"*/\n" + 
+			"    spl_asmnt  =  select\n" + 
+			"                        system_id,  client,  company,  customer,  user_name \n" + 
+			"                    from\n" + 
+			"                        collections.cm_specialist_customer_assignment as cm_asmnt,  :sub_list as subs \n" + 
+			"                    where\n" + 
+			"                        user_name  =  subs.user_id \n" + 
+			"                        and system_id  =  :in_system_id \n" + 
+			"                        and client  =  :in_client;\n" + 
+			"\n" + 
+			"    assignment_list  =  select\n" + 
+			"                            mgr_asmnt.system_id,  mgr_asmnt.client,  mgr_asmnt.company,  mgr_asmnt.customer,  mgr_asmnt.user_name as manager_name,\n" + 
+			"                            spl_asmnt.user_name as specialist_name \n" + 
+			"                        from\n" + 
+			"                            collections.cm_specialist_customer_assignment as mgr_asmnt \n" + 
+			"                        left outer join\n" + 
+			"                            :spl_asmnt as spl_asmnt \n" + 
+			"                                on mgr_asmnt.system_id  =  spl_asmnt.system_id \n" + 
+			"                                and mgr_asmnt.client  =  spl_asmnt.client \n" + 
+			"                                and mgr_asmnt.company  =  spl_asmnt.company \n" + 
+			"                                and mgr_asmnt.customer  =  spl_asmnt.customer \n" + 
+			"                                and mgr_asmnt.user_name<>spl_asmnt.user_name \n" + 
+			"                        where\n" + 
+			"                            mgr_asmnt.system_id  =  :in_system_id \n" + 
+			"                            and mgr_asmnt.client  =  :in_client \n" + 
+			"                            and mgr_asmnt.user_name  =  current_user;\n" + 
+			"\n" + 
+			"    --Build the list of customers and invoices\n" + 
+			"\n" + 
+			"    --Source of customers is the assignment table \n" + 
+			"\n" + 
+			"    customer_invoice_list  =  select\n" + 
+			"                                    bsid.system_id as system_id,  bsid.mandt as client,  ifnull (bsid.vbeln, bsid.belnr) as invoice_number,  bsid.belnr as fin_doc_number,  bkpf.bukrs as company_code,  bsid.gjahr as \"year\",  bsid.kunnr as customer,  days_between (bkpf.budat, current_date) as days_open,\n" + 
+			"                                    case \n" + 
+			"                                        when bsid.shkzg  =  's' \n" + 
+			"                                        then bsid.dmbtr \n" + 
+			"                                        else (-1) * bsid.dmbtr \n" + 
+			"                                    end as outstanding_amount,  t001.waers as local_currency,  madat as last_dunned,  manst as highest_dunning,  current_date as reporting_date,  comp.specialist_name as specialist_name,\n" + 
+			"                                    bsid.shkzg \n" + 
+			"                                from\n" + 
+			"                                    \"collections\".\"bkpf\"bkpf \n" + 
+			"                                inner join\n" + 
+			"                                    \"collections\".\"bsid\"bsid \n" + 
+			"                                        on bsid.system_id  =  bkpf.system_id \n" + 
+			"                                        and bsid.mandt  =  bkpf.mandt \n" + 
+			"                                        and bsid.bukrs  =  bkpf.bukrs \n" + 
+			"                                        and bsid.belnr  =  bkpf.belnr \n" + 
+			"                                        and bsid.gjahr  =  bkpf.gjahr \n" + 
+			"                                inner join\n" + 
+			"                                    :assignment_list comp \n" + 
+			"                                        on bkpf.bukrs  =  comp.company \n" + 
+			"                                        and bkpf.system_id  =  comp.system_id \n" + 
+			"                                        and bkpf.mandt  =  comp.client \n" + 
+			"                                        and bsid.kunnr  =  comp.customer \n" + 
+			"                                inner join\n" + 
+			"                                    \"collections\".\"t001\"t001 \n" + 
+			"                                        on bkpf.system_id  =  t001.system_id \n" + 
+			"                                        and bkpf.mandt  =  t001.mandt \n" + 
+			"                                        and bkpf.bukrs  =  t001.bukrs \n" + 
+			"                                where\n" + 
+			"                                    bsid.system_id  =  :in_system_id \n" + 
+			"                                    and bsid.mandt  =  :in_client \n" + 
+			"                                    and bsid.bukrs  =  :in_company ;\n" + 
+			"                                    \n" + 
+			"\n" + 
+			"    --	Get the list of distinct Customer and Company Code, needed for Credit Information\n" + 
+			"\n" + 
+			"    customer_company_list  =  select\n" + 
+			"                                    distinct system_id,  client,  customer,  company_code,  local_currency \n" + 
+			"                                from\n" + 
+			"                                    :customer_invoice_list ;\n" + 
+			"                                    \n" + 
+			"\n" + 
+			"    customer_company_count  =  select\n" + 
+			"                                    distinct system_id ,  client ,  customer ,  company_code ,  fin_doc_number,  \"year\" \n" + 
+			"                                from\n" + 
+			"                                    :customer_invoice_list \n" + 
+			"                                where\n" + 
+			"                                    shkzg  =  's' ;\n" + 
+			"                                    \n" + 
+			"\n" + 
+			"    customer_company_count_fin  =  select\n" + 
+			"                                        distinct system_id ,  client ,  customer ,  company_code ,  count (fin_doc_number) as inv_count \n" + 
+			"                                    from\n" + 
+			"                                        :customer_company_count \n" + 
+			"                                    group by\n" + 
+			"                                        system_id,  client,  customer ,  company_code ;\n" + 
+			"                                        \n" + 
+			"\n" + 
+			"    --  Part1 : Build Customer Position	- sum of amounts, max of open days, count of documents\n" + 
+			"\n" + 
+			"    customer_position  =  select\n" + 
+			"                                bsid.system_id,  bsid.client,  bsid.customer,  bsid.local_currency,  bsid.specialist_name as specialist_name,  sum (bsid.outstanding_amount) as outstanding_amount,\n" + 
+			"                                cast (max (days_open) as integer ) as oldest_open_invoice_age,  count (bsid.fin_doc_number) as open_invoices_count \n" + 
+			"                            from\n" + 
+			"                                :customer_invoice_list bsid \n" + 
+			"                            group by\n" + 
+			"                                bsid.system_id,  bsid.client,  bsid.customer,  bsid.local_currency,\n" + 
+			"                                bsid.specialist_name \n" + 
+			"                            having\n" + 
+			"                                sum (bsid.outstanding_amount) > 0 ;\n" + 
+			"                                \n" + 
+			"\n" + 
+			"    --select * from :customer_position order by customer;\n" + 
+			"\n" + 
+			"    --	Part 2: \n" + 
+			"\n" + 
+			"    --	Step 1: Identify customers' highest dunning level		\n" + 
+			"\n" + 
+			"    customer_max_dunning_level  =  select\n" + 
+			"                                        list.system_id,  list.client,  list.customer,  max (list.highest_dunning) as highest_dunning \n" + 
+			"                                    from\n" + 
+			"                                        :customer_invoice_list as list \n" + 
+			"                                    inner join\n" + 
+			"                                        :customer_position as total \n" + 
+			"                                            on list.system_id  =  total.system_id \n" + 
+			"                                            and list.client  =  total.client \n" + 
+			"                                            and list.customer  =  total.customer \n" + 
+			"                                    group by\n" + 
+			"                                        list.system_id,  list.client,  list.customer ;\n" + 
+			"                                        \n" + 
+			"\n" + 
+			"    --	Part 2: \n" + 
+			"\n" + 
+			"    --	Step 2: Among the highest levels dunned, find the oldest due dated document	\n" + 
+			"\n" + 
+			"    customer_dunning_date  =  select\n" + 
+			"                                    dun.system_id,  dun.client,  dun.customer,  dun.highest_dunning,  max (inv.last_dunned) as last_dunned \n" + 
+			"                                from\n" + 
+			"                                    :customer_max_dunning_level as dun \n" + 
+			"                                inner join\n" + 
+			"                                    :customer_invoice_list as inv \n" + 
+			"                                        on dun.system_id  =  inv.system_id \n" + 
+			"                                        and dun.client  =  inv.client \n" + 
+			"                                        and dun.customer  =  inv.customer \n" + 
+			"                                        and dun.highest_dunning  =  inv.highest_dunning \n" + 
+			"                                group by\n" + 
+			"                                    dun.system_id,  dun.client,\n" + 
+			"                                    dun.customer,  dun.highest_dunning ;\n" + 
+			"                                    \n" + 
+			"\n" + 
+			"    --select * from :customer_dunning_date order by customer;\n" + 
+			"\n" + 
+			"    --Part 3: Get Credit Information	\n" + 
+			"\n" + 
+			"    customer_credit_information  =  select\n" + 
+			"                                        cust.system_id,  cust.client,  cust.customer,  knkk.klimk as credit_limit,  knkk.dbrtg as credit_rating \n" + 
+			"                                    from\n" + 
+			"                                        :customer_company_list as cust \n" + 
+			"                                    inner join\n" + 
+			"                                        collections.t001 as t001 \n" + 
+			"                                            on cust.system_id  =  t001.system_id \n" + 
+			"                                            and cust.client  =  t001.mandt \n" + 
+			"                                            and cust.company_code  =  t001.bukrs \n" + 
+			"                                    left outer join\n" + 
+			"                                        collections.knkk as knkk \n" + 
+			"                                            on cust.system_id  =  knkk.system_id \n" + 
+			"                                            and cust.client  =  knkk.mandt \n" + 
+			"                                            and cust.customer  =  knkk.kunnr \n" + 
+			"                                            and knkk.kkber  =  t001.kkber ;\n" + 
+			"                                            \n" + 
+			"\n" + 
+			"    --select * from :customer_credit_information order by customer;\n" + 
+			"\n" + 
+			"    -- 	Part 4\n" + 
+			"\n" + 
+			"    todays_reminders  =  select\n" + 
+			"                            system_id,  client,  customer,  by_when,  case \n" + 
+			"                                when count (*)> 0 \n" + 
+			"                                then 'remind' \n" + 
+			"                                else '' \n" + 
+			"                            end as status \n" + 
+			"                        from\n" + 
+			"                            collections.cm_call_outcomes \n" + 
+			"                        where\n" + 
+			"                            by_when  =  current_date \n" + 
+			"                            and action_code  =  '1' \n" + 
+			"                        group by\n" + 
+			"                            system_id,  client,  customer,  by_when ;\n" + 
+			"                            \n" + 
+			"\n" + 
+			"    processed_for_the_day  =  select\n" + 
+			"                                    outcome.system_id,  outcome.client,  outcome.customer,  ifnull (max (outcome.action_code), '' ) as action_code \n" + 
+			"                                from\n" + 
+			"                                    collections.cm_call_outcomes as outcome \n" + 
+			"                                where\n" + 
+			"                                    outcome_date  =  current_date \n" + 
+			"                                group by\n" + 
+			"                                    outcome.system_id,  outcome.client,\n" + 
+			"                                    outcome.customer ;\n" + 
+			"                                    \n" + 
+			"\n" + 
+			"    customer_promises_for_today  =  select\n" + 
+			"                                        cust.system_id,  cust.client,  cust.customer,  case \n" + 
+			"                                            when processed.action_code  =  '' \n" + 
+			"                                            or processed.action_code is null \n" + 
+			"                                            then ifnull (remind.status, 'open') \n" + 
+			"                                            else 'ok' \n" + 
+			"                                        end as status,  ifnull (txt.days_position_text, '') as action_taken \n" + 
+			"                                    from\n" + 
+			"                                        :customer_company_list as cust \n" + 
+			"                                    left outer join\n" + 
+			"                                        :todays_reminders as remind \n" + 
+			"                                            on cust.system_id  =  remind.system_id \n" + 
+			"                                            and cust.client  =  remind.client \n" + 
+			"                                            and cust.customer  =  remind.customer \n" + 
+			"                                    left outer join\n" + 
+			"                                        :processed_for_the_day as processed \n" + 
+			"                                            on cust.system_id  =  processed.system_id \n" + 
+			"                                            and cust.client  =  processed.client \n" + 
+			"                                            and cust.customer  =  processed.customer \n" + 
+			"                                    left outer join\n" + 
+			"                                        collections.cm_action_text txt \n" + 
+			"                                            on processed.action_code  =  txt.action_code \n" + 
+			"                                            and txt.lang  =  :in_language ;\n" + 
+			"                                            \n" + 
+			"\n" + 
+			"    --select * from :customer_promises_for_today order by customer;\n" + 
+			"\n" + 
+			"    --	Bring together the four parts into a single result\n" + 
+			"\n" + 
+			"    out_customer_summary_list  =  select\n" + 
+			"                                        cust.\"system_id\",  cust.\"client\",  cust.\"customer\",  kna.\"customer_name\",  kna.\"telephone_number\",  kna.\"city\",  kna.\"region\",  kna.\"country\",  prio.\"priority\",  cust.\"outstanding_amount\",  cust.\"oldest_open_invoice_age\",  cnt.inv_count as open_invoices_count,\n" + 
+			"                                        dunn.last_dunned as \"last_dunned\",  dunn.highest_dunning as \"highest_dunning\",  ifnull(credit.credit_limit, 0) as \"credit_limit\",  ifnull (credit.credit_rating, '') as \"credit_rating\",  cust.\"local_currency\",  outcome.\"status\",  outcome.\"action_taken\",  ifnull (users.first_name||' '||users.last_name, cust.specialist_name ) as assigned_to \n" + 
+			"                                    from\n" + 
+			"                                        :customer_position as cust \n" + 
+			"                                    inner join\n" + 
+			"                                        :customer_company_count_fin as cnt \n" + 
+			"                                            on cust.system_id  =  cnt.system_id \n" + 
+			"                                            and cust.client  =  cnt.client \n" + 
+			"                                            and cust.customer  =  cnt.customer \n" + 
+			"                                    inner join\n" + 
+			"                                        :customer_dunning_date as dunn \n" + 
+			"                                            on cust.system_id  =  dunn.system_id \n" + 
+			"                                            and cust.client  =  dunn.client \n" + 
+			"                                            and cust.customer  =  dunn.customer \n" + 
+			"                                    inner join\n" + 
+			"                                        :customer_credit_information as credit \n" + 
+			"                                            on cust.system_id  =  credit.system_id \n" + 
+			"                                            and cust.client  =  credit.client \n" + 
+			"                                            and cust.customer  =  credit.customer \n" + 
+			"                                    inner join\n" + 
+			"                                        :customer_promises_for_today as outcome \n" + 
+			"                                            on cust.system_id  =  outcome.system_id \n" + 
+			"                                            and cust.client  =  outcome.client \n" + 
+			"                                            and cust.customer  =  outcome.customer \n" + 
+			"                                    inner join\n" + 
+			"                                        collections.cm_invoice_age_priority prio \n" + 
+			"                                            on cust.oldest_open_invoice_age >=  prio.interval_start \n" + 
+			"                                            and cust.oldest_open_invoice_age <=  prio.interval_end \n" + 
+			"                                    left join\n" + 
+			"                                        :address as kna \n" + 
+			"                                            on cust.system_id  =  kna.system_id \n" + 
+			"                                            and cust.client  =  kna.client \n" + 
+			"                                            and cust.customer  =  kna.customer \n" + 
+			"                                    left outer join\n" + 
+			"                                        collections.cm_user as users \n" + 
+			"                                            on cust.specialist_name  =  users.username ;\n" + 
+			"                                            \n" + 
+			"\n" + 
+			"end ;\n" + 
+			"";
 	private static Keywords keywords = new Keywords();
 
 	private static Pattern assignExp = Pattern.compile(
@@ -426,7 +508,7 @@ public class SQLScriptFormatter {
 	 * @param args
 	 */
 	public String format(String sqlScript) {
-		StringTokenizer tokens = new StringTokenizer(sqlScript,
+		StringTokenizer tokens = new StringTokenizer(sqlScript + "\n",
 				"()+*//*-=<>'`\"[],;" + keywords.getWhitespace(), true);
 
 		boolean afterCreate = false;
@@ -508,7 +590,7 @@ public class SQLScriptFormatter {
 				newline();
 				indent++;
 				afterBegin = true;
-				cString="";
+				cString = "";
 			} else if ("end".equals(lcToken) && !afterQueryOrDml) {
 				afterEnd = true;
 				cString += lcToken;
@@ -649,8 +731,8 @@ public class SQLScriptFormatter {
 				// calculate indent here
 				int initIndent = (int) (indent + Math.ceil(cString
 						.indexOf("select") / 4));
-				cString = new SQLFormatter(cString, 4 * indent, initIndent + 1)
-						.format();
+				cString = new SQLFormatter(cString.trim(), 4 * indent,
+						initIndent + 1).format();
 				out();
 				newline();
 				newline();
@@ -658,7 +740,7 @@ public class SQLScriptFormatter {
 				afterQueryOrDml = false;
 			} else if (afterBegin
 					&& queryOrDmlExp.matcher(cString.trim()).matches()) {
-				cString = new SQLFormatter(cString, 4 * indent, indent + 1)
+				cString = new SQLFormatter(cString.trim(), 4 * indent, indent)
 						.format();
 				out();
 				newline();
@@ -692,11 +774,6 @@ public class SQLScriptFormatter {
 			}
 			lastToken = lcToken;
 		}
-		if (cString.trim().length() > 0) {
-			indent();
-			out();
-			newline();
-		}
 		return result.toString();
 	}
 
@@ -715,7 +792,7 @@ public class SQLScriptFormatter {
 	}
 
 	public static void main(String[] args) {
-		System.out.println(new SQLScriptFormatter().format(test2));
+		System.out.println(new SQLScriptFormatter().format(test1));
 	}
 
 }

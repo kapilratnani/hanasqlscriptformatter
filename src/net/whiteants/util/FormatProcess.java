@@ -59,6 +59,11 @@ public class FormatProcess {
 					token += t;
 				token += t;
 				out();
+
+				if (afterByOrSetOrFromOrSelect) {
+					charsInLineCount += token.length();
+				}
+
 				continue;
 			}
 
@@ -76,13 +81,13 @@ public class FormatProcess {
 					// adding this, because it ignores strings like "-1"
 					token += s;
 				}
+
 			}
 
 			if (afterByOrSetOrFromOrSelect && ",".equals(token)
 					&& inFunction <= 0) {
 				commaAfterByOrFromOrSelect();
 			} else if ("=".equals(token)) {
-				token = " " + token + " ";
 				out();
 				token = token.trim();
 			} else if (afterOn && ",".equals(token)) {
@@ -139,12 +144,10 @@ public class FormatProcess {
 
 	private void commaAfterByOrFromOrSelect() {
 		out();
-		charsInLineCount += (lastToken.length() + 1);
+		charsInLineCount++;
 		if (charsInLineCount > maxCharsInLine) {
 			newline();
 			charsInLineCount = 0;
-		} else {
-			result.append(" ");
 		}
 	}
 
@@ -173,6 +176,13 @@ public class FormatProcess {
 			return;
 		}
 
+		if (afterByOrSetOrFromOrSelect) {
+			charsInLineCount += token.length();
+
+			if ("case".equals(lcToken)) {
+				newline();
+			}
+		}
 		out();
 		if ("between".equals(lcToken)) {
 			afterBetween = true;
@@ -212,10 +222,7 @@ public class FormatProcess {
 
 	private void select() {
 		out();
-		// indent++;
-		if (lastToken != null)
-			indent += Math.ceil((lastToken.length() + 3)
-					/ indentString.length());
+		indent++;
 		newline();
 		parentCounts.addLast(parentsSinceSelect);
 		afterByOrFromOrSelects.addLast(afterByOrSetOrFromOrSelect);
@@ -228,7 +235,9 @@ public class FormatProcess {
 	}
 
 	private void endNewClause() {
-		if (!afterBeginBeforeEnd && inFunction <= 0) {
+		if (afterInsert && "into".equals(lcToken)) {
+			newline();
+		} else if (!afterBeginBeforeEnd && inFunction <= 0) {
 			indent--;
 			if (afterOn) {
 				indent--;

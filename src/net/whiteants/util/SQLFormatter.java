@@ -62,22 +62,30 @@ public class SQLFormatter {
 
 	public static void main(String[] args) {
 			System.out.println(new SQLFormatter("select\n" + 
-					"			ancestor,nasdj,dajsdksm,dajsdks,dkasjd,ajsdkasd,kjdashd,akjsdh,kajshd,kjashd,kajsdh,jkashd,jasd,kajsdh,dlakjs,asijd,lasjd,sldjasd,lasdj,alskjd,\n" + 
-					"			:child_id \n" + 
-					"		as\n" + 
-					"			descendent,depth+1 \n" + 
-					"		as\n" + 
-					"			depth \n" + 
-					"		from\n" + 
-					"			collections_hierarchy.hierarchy \n" + 
-					"		where\n" + 
-					"			descendent=:parent_id \n" + 
-					"		union\n" + 
-					"		select\n" + 
-					"			:child_id,\n" + 
-					"			:child_id,\n" + 
-					"			0 \n" + 
-					"		from\n" + 
-					"			dummy;", 0, 1).format());
+					"                                        cust.system_id, cust.client, cust.customer, \n" + 
+					"                                        case \n" + 
+					"                                            when processed.action_code = '' \n" + 
+					"                                            or processed.action_code is null \n" + 
+					"                                            then ifnull (remind.status, 'open') \n" + 
+					"                                            else 'ok' \n" + 
+					"                                        end as status,\n" + 
+					"                                        ifnull (txt.days_position_text, '') as action_taken \n" + 
+					"                                    from\n" + 
+					"                                        :customer_company_list as cust \n" + 
+					"                                    left outer join\n" + 
+					"                                        :todays_reminders as remind \n" + 
+					"                                            on cust.system_id = remind.system_id \n" + 
+					"                                            and cust.client = remind.client \n" + 
+					"                                            and cust.customer = remind.customer \n" + 
+					"                                    left outer join\n" + 
+					"                                        :processed_for_the_day as processed \n" + 
+					"                                            on cust.system_id = processed.system_id \n" + 
+					"                                            and cust.client = processed.client \n" + 
+					"                                            and cust.customer = processed.customer \n" + 
+					"                                    left outer join\n" + 
+					"                                        collections.cm_action_text txt \n" + 
+					"                                            on processed.action_code = txt.action_code \n" + 
+					"                                            and txt.lang = :in_language" + 
+					"", 4, 1).format());
 	}
 }
