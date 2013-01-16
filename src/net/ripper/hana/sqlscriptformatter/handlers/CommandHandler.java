@@ -1,5 +1,9 @@
 package net.ripper.hana.sqlscriptformatter.handlers;
 
+import java.math.MathContext;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import net.ripper.hana.sqlscriptformatter.SQLScriptFormatter;
 import net.whiteants.util.SQLFormatter;
 
@@ -72,16 +76,17 @@ public class CommandHandler extends AbstractHandler {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-				} else {
-					try {
-						String formattedSql = new SQLFormatter(content, 0, 1)
-								.format();
-						doc.replace(0, doc.getLength(), formattedSql);
-					} catch (BadLocationException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
+				} 
+//				else {
+//					try {
+//						String formattedSql = new SQLFormatter(content, 0, 1)
+//								.format();
+//						doc.replace(0, doc.getLength(), formattedSql);
+//					} catch (BadLocationException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				}
 			}
 		}
 		return null;
