@@ -9,129 +9,214 @@ import net.whiteants.util.Keywords;
 import net.whiteants.util.SQLFormatter;
 
 public class SQLScriptFormatter {
-
-	static String test6="create procedure collections.proc_mgr_assign_customers2(\n" + 
-			"		in in_system_id varchar(5),\n" + 
-			"	 	in in_client varchar(3),\n" + 
-			"	 	in in_company varchar(10),\n" + 
-			"	 	in in_subordinate varchar(256),\n" + 
-			"	 	in in_customer_list varchar(10000),\n" + 
-			"	 	out out_messages collections.TT_MESSAGE_TABLE\n" + 
-			" 	) sql security invoker as \n" + 
-			"\n" + 
-			"	str_length integer ;\n" + 
-			"	local_csv varchar (10001) ;\n" + 
-			"	existing_count integer := 0 ;\n" + 
-			"	already_assigned_to varchar (4) := '' ;\n" + 
-			"	customer_splist_entry varchar (21) ;\n" + 
-			"	specialist varchar (256) := '' ;\n" + 
-			"	customer varchar (10) := '' ;\n" + 
-			"	is_subordinate integer:=1; \n" + 
-			"	\n" + 
-			"begin \n" + 
-			"		--Check if the subordinate is in managers subordinate list\n" + 
-			"	call COLLECTIONS_HIERARCHY.expand_hierarchy_from(current_user,1,htree);\n" + 
-			"	\n" + 
-			"	sub_list=select\n" + 
-			"		 		user_id \n" + 
-			"			from :htree \n" + 
-			"			where hlevel=1;\n" + 
-			"	\n" + 
-			"		select\n" + 
-			"			 count(*) \n" + 
-			"		into is_subordinate\n" + 
-			"		from :sub_list \n" + 
-			"		where user_id=:in_subordinate;\n" + 
-			"	 \n" + 
-			"		if(:is_subordinate>0) then \n" + 
-			"		--Check if the specialist already has an assignemnt from another company code \n" + 
-			"	 \n" + 
-			"			if (:in_subordinate <> '') then \n" + 
-			"				select\n" + 
-			"					count(*) \n" + 
-			"				into existing_count \n" + 
-			"				from collections.cm_specialist_customer_assignment \n" + 
-			"				where \n" + 
-			"					company <> :in_company and \n" + 
-			"					user_name = :in_subordinate;\n" + 
-			"	 \n" + 
-			"			end if;\n" + 
-			"			\n" + 
-			"		 --If no such assgnment exists, proceed\n" + 
-			"			if (:existing_count = 0) then -- Local variable intialization\n" + 
-			"		 		local_csv := :in_customer_list||','; \n" + 
-			"		 		str_length := length (:local_csv) ;\n" + 
-			"		 		\n" + 
-			"		 		-- Start loop and process until no more of the input string is left	\n" + 
-			"		 \n" + 
-			"				while :str_length > 0 do \n" + 
-			"					-- Obtain the token before the first comma as a table 	\n" + 
-			"		 			--  select cast(substr_before(:local_csv,',') as varchar(100)) into customer_splist_entry from sys.dummy;\n" + 
-			"		 			select\n" + 
-			"			 			cast(TRIM (' ' \n" + 
-			"					from substr_before(:local_csv,',') ) as varchar (10)) \n" + 
-			"						into customer \n" + 
-			"					from collections.cm_dummy;\n" + 
-			"		 			--	Assign the the string following the comma to :local_csv \n" + 
-			"		 			\n" + 
-			"		 			select TRIM(' ' \n" + 
-			"					from substr_after(:local_csv,',')) \n" + 
-			"					into local_csv \n" + 
-			"					from collections.cm_dummy ;\n" + 
-			"		 			--Delete customer assignment to some other user, if any, in the same level. \n" + 
-			"		 			--This will ensure that only one person is assigned a particular customer \n" + 
-			"		 			\n" + 
-			"		 			delete \n" + 
-			"		 			from collections.cm_specialist_customer_assignment \n" + 
-			"					where \n" + 
-			"						system_id = :in_system_id \n" + 
-			"						and client = :in_client \n" + 
-			"						and company = :in_company \n" + 
-			"						and customer = :customer \n" + 
-			"						and user_name in (select user_id from :sub_list);\n" + 
-			"						\n" + 
-			"		 			--Insert the new assignment \n" + 
-			"		 			--(Empty specialist name means Unassign, Non-empty Specialist may mean fresh assignment or re-assignment) \n" + 
-			"		 			\n" + 
-			"		 			insert into collections.cm_specialist_customer_assignment \n" + 
-			"		 			values (:in_system_id,\n" + 
-			"			 				:in_client,\n" + 
-			"			 				:in_company,\n" + 
-			"			 				:customer,\n" + 
-			"			 				:in_subordinate,\n" + 
-			"							'');\n" + 
-			"							\n" + 
-			"		 			--Compute string length		\n" + 
-			"		 			str_length := length (:local_csv);\n" + 
-			"		 \n" + 
-			"				end while;\n" + 
-			"		 \n" + 
-			"			else \n" + 
-			"				select \n" + 
-			"					top 1 distinct company \n" + 
-			"				into already_assigned_to \n" + 
-			"				from collections.cm_specialist_customer_assignment \n" + 
-			"				where \n" + 
-			"					user_name = :in_subordinate;\n" + 
-			"					\n" + 
-			"		 		out_messages =	select \n" + 
-			"		 							'CM_MGR_100' as message_code,\n" + 
-			"			 						:in_subordinate || ' has already been assigned customers from company code ' \n" + 
-			"			 									|| :already_assigned_to || '. Cannot assign customers from ' || \n" + 
-			"			 									:in_company || '.' as message_text \n" + 
-			"								from collections.cm_dummy;\n" + 
-			"		 \n" + 
-			"		end if;\n" + 
-			"	else\n" + 
-			"	 	out_messages = 	select\n" + 
-			"		 					'CM_MGR_101' as message_code,\n" + 
-			"		 					:in_subordinate || ' is not subordinate to ' ||current_user|| '.' as message_text \n" + 
-			"						from collections.cm_dummy;\n" + 
-			"	 \n" + 
-			"	end if; \n" + 
-			"\n" + 
-			"end;\n" + 
-			"";
+	static String test7 = "CREATE PROCEDURE EDIT_NETWORK_STATUS ( --used while updating the status of network like - activating, blocking, closing or draft\n"
+			+ " \n"
+			+ "              IN networkId VARCHAR(32),\n"
+			+ "              IN networkStatus VARCHAR(15),\n"
+			+ "              IN networkModifiedBy VARCHAR(32),\n"
+			+ "            OUT networkModifiedId VARCHAR(32),\n"
+			+ "            OUT statusMaxSeverity TINYINT,\n"
+			+ "            OUT statusLog VARCHAR (3000))\n"
+			+ "             \n"
+			+ "LANGUAGE SQLSCRIPT AS\n"
+			+ "           \n"
+			+ "            v_count INTEGER;\n"
+			+ "            v_ownerId VARCHAR(32);\n"
+			+ "            v_ownerType VARCHAR(32);\n"
+			+ "            v_timestamp TIMESTAMP;\n"
+			+ "           \n"
+			+ "BEGIN\n"
+			+ " \n"
+			+ "            statusLog := '' ;\n"
+			+ "            statusMaxSeverity := 0;\n"
+			+ " \n"
+			+ "--check if the network is present in the database ?\n"
+			+ " \n"
+			+ "IF :networkId IS NULL OR :networkId =''\n"
+			+ "THEN\n"
+			+ "            CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog, statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_REQUIRED', 3);\n"
+			+ "            return;\n"
+			+ "ELSE\n"
+			+ "                        select count(id) into v_count from network as n  where n.id=:networkId;\n"
+			+ "                        IF :v_count < 1\n"
+			+ "                        THEN\n"
+			+ "                                    CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog,statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_INVALID', 3);\n"
+			+ "                                    return;\n"
+			+ "                        END IF;\n"
+			+ "END IF;\n"
+			+ " \n"
+			+ "--check if the Network modifier user id is valid (pernissions are checked later in this procedure) ?\n"
+			+ " \n"
+			+ "IF :networkModifiedBy IS NULL OR :networkModifiedBy =''\n"
+			+ "THEN\n"
+			+ "            CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog, statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_MODIFIED_BY_USER_REQUIRED', 3);\n"
+			+ "            return;\n"
+			+ "ELSE\n"
+			+ "                        select count(uuid) into v_count from profile as p where p.uuid=:networkModifiedBy;\n"
+			+ "                        IF :v_count < 1\n"
+			+ "                        THEN\n"
+			+ "                                    CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog,statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_MODIFIED_BY_USER_INVALID', 3);\n"
+			+ "                                    return;\n"
+			+ "                        END IF;\n"
+			+ "END IF;           \n"
+			+ " \n"
+			+ "--get the ownerId and ownertype of the edited network\n"
+			+ " \n"
+			+ "select owner_id,owner_type into v_ownerId,v_ownerType from network where id = :networkId;\n"
+			+ " \n"
+			+ "--check if the modifier of the network is admin or moderator of the owner_community if ownertype is community?\n"
+			+ " \n"
+			+ "IF :v_ownerType = 'COMMUNITY' or :v_ownerType = 'community'\n"
+			+ "THEN\n"
+			+ "            select count(id) into v_count from membership as m where m.community_id = :v_ownerId and m.user_id = :networkModifiedBy and (m.type = 20 or m.type=10) and m.status=20;\n"
+			+ "            IF :v_count < 1\n"
+			+ "            THEN\n"
+			+ "                        CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog,statusMaxSeverity, 'Network.Edit_Status.ERROR_EDIT_PERMISSION_REQUIRED', 3);\n"
+			+ "                        return;\n"
+			+ "            END IF;\n"
+			+ "END IF;\n"
+			+ " \n"
+			+ "--check if the network status is from valid domain and not empty ?\n"
+			+ " \n"
+			+ "IF :networkStatus='' or :networkStatus IS NULL\n"
+			+ "THEN\n"
+			+ "            CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog,statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_STATUS_REQUIRED', 3);\n"
+			+ "            return;\n"
+			+ "ELSE\n"
+			+ "            select count(*) into v_count from dummy where :networkStatus in ('ACTIVE','DRAFT','BLOCKED','CLOSED','active','draft','blocked','closed');\n"
+			+ "            IF :v_count=0\n"
+			+ "            THEN\n"
+			+ "                        CALL CHARITRA_RO._APPEND_STATUSLOG (statusLog,statusMaxSeverity, 'Network.Edit_Status.ERROR_NETWORK_STATUS_VALUE_INVALID', 3);\n"
+			+ "                        return;\n"
+			+ "            END IF;\n"
+			+ "END IF;\n"
+			+ " \n"
+			+ "-- call update query\n"
+			+ " \n"
+			+ "v_timestamp := CURRENT_UTCTIMESTAMP;\n"
+			+ " \n"
+			+ "UPDATE NETWORK SET STATUS=:networkStatus, MODIFIED_BY = :networkModifiedBy, MODIFIED_ON=:v_timestamp where Id = networkId;  \n"
+			+ " \n" + "END;\n" + " ";
+	static String test6 = "create procedure collections.proc_mgr_assign_customers2(\n"
+			+ "		in in_system_id varchar(5),\n"
+			+ "	 	in in_client varchar(3),\n"
+			+ "	 	in in_company varchar(10),\n"
+			+ "	 	in in_subordinate varchar(256),\n"
+			+ "	 	in in_customer_list varchar(10000),\n"
+			+ "	 	out out_messages collections.TT_MESSAGE_TABLE\n"
+			+ " 	) sql security invoker as \n"
+			+ "\n"
+			+ "	str_length integer ;\n"
+			+ "	local_csv varchar (10001) ;\n"
+			+ "	existing_count integer := 0 ;\n"
+			+ "	already_assigned_to varchar (4) := '' ;\n"
+			+ "	customer_splist_entry varchar (21) ;\n"
+			+ "	specialist varchar (256) := '' ;\n"
+			+ "	customer varchar (10) := '' ;\n"
+			+ "	is_subordinate integer:=1; \n"
+			+ "	\n"
+			+ "begin \n"
+			+ "		--Check if the subordinate is in managers subordinate list\n"
+			+ "	call COLLECTIONS_HIERARCHY.expand_hierarchy_from(current_user,1,htree);\n"
+			+ "	\n"
+			+ "	sub_list=select\n"
+			+ "		 		user_id \n"
+			+ "			from :htree \n"
+			+ "			where hlevel=1;\n"
+			+ "	\n"
+			+ "		select\n"
+			+ "			 count(*) \n"
+			+ "		into is_subordinate\n"
+			+ "		from :sub_list \n"
+			+ "		where user_id=:in_subordinate;\n"
+			+ "	 \n"
+			+ "		if(:is_subordinate>0) then \n"
+			+ "		--Check if the specialist already has an assignemnt from another company code \n"
+			+ "	 \n"
+			+ "			if (:in_subordinate <> '') then \n"
+			+ "				select\n"
+			+ "					count(*) \n"
+			+ "				into existing_count \n"
+			+ "				from collections.cm_specialist_customer_assignment \n"
+			+ "				where \n"
+			+ "					company <> :in_company and \n"
+			+ "					user_name = :in_subordinate;\n"
+			+ "	 \n"
+			+ "			end if;\n"
+			+ "			\n"
+			+ "		 --If no such assgnment exists, proceed\n"
+			+ "			if (:existing_count = 0) then -- Local variable intialization\n"
+			+ "		 		local_csv := :in_customer_list||','; \n"
+			+ "		 		str_length := length (:local_csv) ;\n"
+			+ "		 		\n"
+			+ "		 		-- Start loop and process until no more of the input string is left	\n"
+			+ "		 \n"
+			+ "				while :str_length > 0 do \n"
+			+ "					-- Obtain the token before the first comma as a table 	\n"
+			+ "		 			--  select cast(substr_before(:local_csv,',') as varchar(100)) into customer_splist_entry from sys.dummy;\n"
+			+ "		 			select\n"
+			+ "			 			cast(TRIM (' ' \n"
+			+ "					from substr_before(:local_csv,',') ) as varchar (10)) \n"
+			+ "						into customer \n"
+			+ "					from collections.cm_dummy;\n"
+			+ "		 			--	Assign the the string following the comma to :local_csv \n"
+			+ "		 			\n"
+			+ "		 			select TRIM(' ' \n"
+			+ "					from substr_after(:local_csv,',')) \n"
+			+ "					into local_csv \n"
+			+ "					from collections.cm_dummy ;\n"
+			+ "		 			--Delete customer assignment to some other user, if any, in the same level. \n"
+			+ "		 			--This will ensure that only one person is assigned a particular customer \n"
+			+ "		 			\n"
+			+ "		 			delete \n"
+			+ "		 			from collections.cm_specialist_customer_assignment \n"
+			+ "					where \n"
+			+ "						system_id = :in_system_id \n"
+			+ "						and client = :in_client \n"
+			+ "						and company = :in_company \n"
+			+ "						and customer = :customer \n"
+			+ "						and user_name in (select user_id from :sub_list);\n"
+			+ "						\n"
+			+ "		 			--Insert the new assignment \n"
+			+ "		 			--(Empty specialist name means Unassign, Non-empty Specialist may mean fresh assignment or re-assignment) \n"
+			+ "		 			\n"
+			+ "		 			insert into collections.cm_specialist_customer_assignment \n"
+			+ "		 			values (:in_system_id,\n"
+			+ "			 				:in_client,\n"
+			+ "			 				:in_company,\n"
+			+ "			 				:customer,\n"
+			+ "			 				:in_subordinate,\n"
+			+ "							'');\n"
+			+ "							\n"
+			+ "		 			--Compute string length		\n"
+			+ "		 			str_length := length (:local_csv);\n"
+			+ "		 \n"
+			+ "				end while;\n"
+			+ "		 \n"
+			+ "			else \n"
+			+ "				select \n"
+			+ "					top 1 distinct company \n"
+			+ "				into already_assigned_to \n"
+			+ "				from collections.cm_specialist_customer_assignment \n"
+			+ "				where \n"
+			+ "					user_name = :in_subordinate;\n"
+			+ "					\n"
+			+ "		 		out_messages =	select \n"
+			+ "		 							'CM_MGR_100' as message_code,\n"
+			+ "			 						:in_subordinate || ' has already been assigned customers from company code ' \n"
+			+ "			 									|| :already_assigned_to || '. Cannot assign customers from ' || \n"
+			+ "			 									:in_company || '.' as message_text \n"
+			+ "								from collections.cm_dummy;\n"
+			+ "		 \n"
+			+ "		end if;\n"
+			+ "	else\n"
+			+ "	 	out_messages = 	select\n"
+			+ "		 					'CM_MGR_101' as message_code,\n"
+			+ "		 					:in_subordinate || ' is not subordinate to ' ||current_user|| '.' as message_text \n"
+			+ "						from collections.cm_dummy;\n"
+			+ "	 \n"
+			+ "	end if; \n"
+			+ "\n" + "end;\n" + "";
 	static String test5 = "create procedure collections.proc_GET_USER_ROLES \n"
 			+ "	(in grantee NVARCHAR (256), OUT USER_ROLE_DATA collections.tt_ROLE\n"
 			+ "	) LANGUAGE SQLSCRIPT READS SQL DATA WITH RESULT VIEW collections.USER_ROLE_VIEW AS \n"
@@ -662,15 +747,20 @@ public class SQLScriptFormatter {
 	private static Pattern assignExp = Pattern.compile(
 			"(.*)\\s*:=\\s*([^;]*);", Pattern.DOTALL);
 	private static Pattern selectAssignExp = Pattern.compile(
-			"(.*)\\s*=\\s*select\\s*.*;", Pattern.DOTALL);
+			"(.*)\\s*=\\s*select\\s*.*;", Pattern.DOTALL
+					| Pattern.CASE_INSENSITIVE);
 	private static Pattern queryOrDmlExp = Pattern.compile(
-			"(select|delete|update|insert)\\s*[^;]*;", Pattern.DOTALL);
+			"(select|delete|update|insert)\\s*[^;]*;", Pattern.DOTALL
+					| Pattern.CASE_INSENSITIVE);
 	private static Pattern genericAssignExp = Pattern.compile(
 			"(.*)\\s*=\\s*([^;]*);", Pattern.DOTALL);
+	private static Pattern createProcExp = Pattern.compile(
+			"create\\s+procedure\\s+(.*)\\s+(as)", Pattern.DOTALL
+					| Pattern.CASE_INSENSITIVE);
 	private static DDLFormatter ddlFormatter = new DDLFormatter();
 	private StringBuilder result = new StringBuilder();
 	private String cString = "";
-	private int indent = 1;
+	private int indent = 0;
 
 	/**
 	 * @param args
@@ -679,8 +769,6 @@ public class SQLScriptFormatter {
 		StringTokenizer tokens = new StringTokenizer(sqlScript + "\n",
 				"()+*//*-=<>'`\"[],;" + keywords.getWhitespace(), true);
 
-		boolean afterCreate = false;
-		boolean afterProcedure = false;
 		boolean afterBegin = false;
 		boolean afterQueryOrDml = false;
 		boolean afterEnd = false;
@@ -699,7 +787,7 @@ public class SQLScriptFormatter {
 				boolean multiline = false;
 				// comments inside a query should not be dumped
 				// include it with the query and send it to sql formatter
-				if (cString.endsWith("--") && afterQueryOrDml)
+				if (cString.endsWith("--") && (afterQueryOrDml || !afterBegin))
 					dump = false;
 				// don't format comments, just paste them as is
 				if (cString.startsWith("/*")) {
@@ -735,31 +823,7 @@ public class SQLScriptFormatter {
 						break;
 				}
 				cString += token;
-			} else if ("create".equals(lcToken)) {
-				afterCreate = true;
-				cString += lcToken;
-			} else if (afterCreate && "procedure".equals(lcToken)) {
-				// format create procedure section
-				afterProcedure = true;
-				while (tokens.hasMoreTokens() && !"as".equals(lcToken)) {
-
-					if (!lastToken.equals(" ") || !lastToken.equals(lcToken)) {
-						cString += lcToken;
-					}
-
-					lastToken = lcToken;
-					lcToken = tokens.nextToken().toLowerCase()
-							.replaceAll("[\\r\\n\\t]", " ");
-				}
-				cString += lcToken;
-				cString = ddlFormatter.format(cString);
-				out();
-				newline();
-				cString = "";
 			} else if ("begin".equals(lcToken)) {
-
-				afterProcedure = false;
-				afterCreate = false;
 				indent--;
 				cString = lcToken;
 				out();
@@ -823,38 +887,48 @@ public class SQLScriptFormatter {
 				out();
 				newline();
 				cString = "";
-			} else if ("while".equals(lcToken) && !afterEnd) {
-				cString = "";
-				while (tokens.hasMoreTokens() && !"do".equals(token)) {
-					cString += token;
-					token = tokens.nextToken().toLowerCase();
+			} else if (!afterEnd && "while".equals(lcToken)) {
+				cString = lcToken;
+				lastToken = "";
+				while (tokens.hasMoreTokens() && !"then".equals(lcToken)) {
+					lcToken = tokens.nextToken().toLowerCase()
+							.replaceAll("[\r\n\t]", " ");
+					if (!lastToken.equals(" ") || !lastToken.equals(lcToken))
+						cString += lcToken;
+					lastToken = lcToken;
 				}
-				cString += token;
 				indent();
 				out();
 				newline();
 				indent++;
 				cString = "";
-			} else if ("for".equals(lcToken) && !afterEnd) {
-				cString = "";
-				while (tokens.hasMoreTokens() && !"do".equals(token)) {
-					cString += token;
-					token = tokens.nextToken().toLowerCase();
+			} else if (!afterEnd && "for".equals(lcToken)) {
+				cString = lcToken;
+				lastToken = "";
+				while (tokens.hasMoreTokens() && !"then".equals(lcToken)) {
+					lcToken = tokens.nextToken().toLowerCase()
+							.replaceAll("[\r\n\t]", " ");
+					if (!lastToken.equals(" ") || !lastToken.equals(lcToken))
+						cString += lcToken;
+					lastToken = lcToken;
 				}
-				cString += token;
 				indent();
 				out();
 				newline();
 				indent++;
 				cString = "";
-			} else if (("if".equals(lcToken.trim()) || "elseif".equals(lcToken
-					.trim())) && !afterEnd) {
-				cString = "";
-				while (tokens.hasMoreTokens() && !"then".equals(token)) {
-					cString += token.replaceAll("[\\r\\n\\t]", " ");
-					token = tokens.nextToken().toLowerCase();
+			} else if (!afterEnd
+					&& ("if".equals(lcToken.trim()) || "elseif".equals(lcToken
+							.trim()))) {
+				cString = lcToken;
+				lastToken = "";
+				while (tokens.hasMoreTokens() && !"then".equals(lcToken)) {
+					lcToken = tokens.nextToken().toLowerCase()
+							.replaceAll("[\r\n\t]", " ");
+					if (!lastToken.equals(" ") || !lastToken.equals(lcToken))
+						cString += lcToken;
+					lastToken = lcToken;
 				}
-				cString += token;
 				indent();
 				indent++;
 
@@ -865,28 +939,25 @@ public class SQLScriptFormatter {
 			} else if (afterBegin && "call".equals(lcToken)) {
 				cString = token;
 				lastToken = "";
-				while (tokens.hasMoreTokens() && !";".equals(token)) {
-					token = tokens.nextToken().replaceAll("[\r\n\t]", " ");
-					if (!lastToken.equals(" ") || !lastToken.equals(token))
-						cString += token;
+				while (tokens.hasMoreTokens() && !";".equals(lcToken)) {
+					lcToken = tokens.nextToken().toLowerCase()
+							.replaceAll("[\r\n\t]", " ");
+					if (!lastToken.equals(" ") || !lastToken.equals(lcToken))
+						cString += lcToken;
+					lastToken = lcToken;
 				}
 
 				indent();
 
 				out();
-				newline();
 				newline();
 				cString = "";
-			} else if (afterCreate && afterProcedure && !" ".equals(lcToken)) {
-				while (tokens.hasMoreTokens() && !";".equals(lcToken)) {
-					cString += lcToken;
-					lcToken = tokens.nextToken().toLowerCase()
-							.replaceAll("[\\r\\n\\t]", " ");
-				}
-				cString += lcToken;
-				indent();
+			} else if (!afterBegin
+					&& createProcExp.matcher(cString.trim()).matches()) {
+				cString = ddlFormatter.format(cString.trim());
 				out();
 				newline();
+				indent++;
 				cString = "";
 			} else if (afterBegin
 					&& assignExp.matcher(cString.trim()).matches()) {
@@ -948,9 +1019,9 @@ public class SQLScriptFormatter {
 				cString = "";
 				afterQueryOrDml = false;
 			} else if (cString.endsWith(";")) {
+				cString = cString.trim();
 				indent();
 				out();
-				newline();
 				newline();
 				cString = "";
 			} else {
@@ -979,7 +1050,7 @@ public class SQLScriptFormatter {
 	}
 
 	public static void main(String[] args) {
-		System.out.println(new SQLScriptFormatter().format(test6));
+		System.out.println(new SQLScriptFormatter().format(test7));
 	}
 
 }
