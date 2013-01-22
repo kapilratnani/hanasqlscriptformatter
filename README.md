@@ -5,6 +5,21 @@ Eclipse plugin for formatting SAP HANA SQLScript. Can be used with SAP HANA Stud
 
 Installation
 ------------
-Copy the dropins folder to your hdbstudio folder(not in hdbstudio/plugins folder) and restart hdbstudio. 
+Just copy the jar file "HANASQLScriptFormatter_X.X.X.jar" to your hdbstudio's plugin directory and your done!!
 
-"dropins" is a special folder, Eclipse checks for this folder at startup in its working directory and installs any plugin present in this folder.
+Usage
+-----
+1. Select the procedure and press "CTRL+6"(OSX - CMD+6) or click on the toolbar icon labeled "Format HANA SQL Script".
+
+Note : You need to select the whole procedure for the formatter to work properly. If in some case the formatter doesn't work as intended post a bug report in the issues section and as always, undo command will bring the procedure to pre-formatted state.
+
+Known issues
+------------
+Doesn't works with "/**/" style comment inside "create procedure proc_name(<args>)...as" section, works as intended after that.
+
+TODO
+----
+1. Add license.
+2. Fix /**/ style comments inside create proc.
+3. Work on better formatting of subqueries.
+4. Look for alternative ways of formatting, look in the direction of generating a parser and then format using the AST.
