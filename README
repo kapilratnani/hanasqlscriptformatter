@@ -5,9 +5,6 @@ Eclipse plugin for formatting SAP HANA SQLScript. Can be used with SAP HANA Stud
 
 Installation
 ------------
-
-Latest Binaries can be downloaded from https://sourceforge.net/projects/sqlscriptformat/files/
-
 Just copy the jar file "HANASQLScriptFormatter_X.X.X.jar" to your hdbstudio's plugin directory and your done!!
 
 Usage
