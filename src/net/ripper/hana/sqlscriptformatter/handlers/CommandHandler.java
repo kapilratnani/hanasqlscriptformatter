@@ -1,11 +1,6 @@
 package net.ripper.hana.sqlscriptformatter.handlers;
 
-import java.math.MathContext;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import net.ripper.hana.sqlscriptformatter.SQLScriptFormatter;
-import net.whiteants.util.SQLFormatter;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -44,51 +39,48 @@ public class CommandHandler extends AbstractHandler {
 		if (page != null) {
 			IEditorPart part = page.getActiveEditor();
 
-			String filename = part.getTitle();
-			if (filename.endsWith("sql")) {
-				ITextEditor editor = (ITextEditor) part;
-				IDocumentProvider dp = editor.getDocumentProvider();
-				IDocument doc = dp.getDocument(editor.getEditorInput());
+			ITextEditor editor = (ITextEditor) part;
+			IDocumentProvider dp = editor.getDocumentProvider();
+			IDocument doc = dp.getDocument(editor.getEditorInput());
 
-				ISelection selection = editor.getSelectionProvider()
-						.getSelection();
-				ITextSelection textSelection = null;
-				String content = "";
-				if (selection != null) {
-					textSelection = (ITextSelection) selection;
-					if (textSelection.getLength() > 0) {
-						content = textSelection.getText();
-					} else {
-						content = doc.get();
-					}
+			ISelection selection = editor.getSelectionProvider().getSelection();
+			ITextSelection textSelection = null;
+			String content = "";
+			if (selection != null) {
+				textSelection = (ITextSelection) selection;
+				if (textSelection.getLength() > 0) {
+					content = textSelection.getText();
+				} else {
+					content = doc.get();
 				}
-
-				if (textSelection != null && textSelection.getLength() > 0) {
-					try {
-						int lineOffset = doc.getLineOffset(textSelection
-								.getStartLine());
-
-						String formattedSql = new SQLScriptFormatter()
-								.format(content);
-						doc.replace(lineOffset, textSelection.getLength(),
-								formattedSql);
-					} catch (BadLocationException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} 
-//				else {
-//					try {
-//						String formattedSql = new SQLFormatter(content, 0, 1)
-//								.format();
-//						doc.replace(0, doc.getLength(), formattedSql);
-//					} catch (BadLocationException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//				}
 			}
+
+			if (textSelection != null && textSelection.getLength() > 0) {
+				try {
+					int lineOffset = doc.getLineOffset(textSelection
+							.getStartLine());
+
+					String formattedSql = new SQLScriptFormatter()
+							.format(content);
+					doc.replace(lineOffset, textSelection.getLength(),
+							formattedSql);
+				} catch (BadLocationException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			// else {
+			// try {
+			// String formattedSql = new SQLFormatter(content, 0, 1)
+			// .format();
+			// doc.replace(0, doc.getLength(), formattedSql);
+			// } catch (BadLocationException e) {
+			// // TODO Auto-generated catch block
+			// e.printStackTrace();
+			// }
+			// }
 		}
+
 		return null;
 	}
 }

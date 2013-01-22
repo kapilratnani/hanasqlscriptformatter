@@ -69,7 +69,7 @@ public class DDLFormatter {
 
 	private String formatCreateTable(String sql) {
 		StringBuffer result = new StringBuffer().append("");
-		StringTokenizer tokens = new StringTokenizer(sql, " -(,)'[]\"\n", true);
+		StringTokenizer tokens = new StringTokenizer(sql, " /*-(,)'[]\"\n", true);
 
 		int depth = 0;
 		boolean quoted = false;
@@ -92,6 +92,22 @@ public class DDLFormatter {
 					token += s;
 				}
 			}
+			
+			if (token.equals("/")) {
+				String s = tokens.nextToken();
+				if (s.equals("*")) {
+					token = "/*";
+					while (!token.endsWith("*/")) {
+						s = tokens.nextToken();
+						token += s;
+					}
+					result.append(token + "\n" + indentString);
+					continue;
+				} else {
+					token += s;
+				}
+			}
+			
 
 			if (isQuote(token)) {
 				quoted = !quoted;
