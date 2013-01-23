@@ -8,8 +8,12 @@ Installation
 
 Latest Binaries can be downloaded from https://sourceforge.net/projects/sqlscriptformat/files/
 
-Just copy the jar file "HANASQLScriptFormatter_X.X.X.jar" to your hdbstudio's plugin directory and your done!!
-
+1. Download "hanasqlscriptformatter.zip" file from the above link.
+2. Open HDBStudio 
+3. Click on Help->Install New Software.
+4. Click on "Add". In the "Add Repository" dialog Click on "Archive".
+5. Select the downloaded archive "hanasqlscriptformatter.zip" and continue as usual.
+ 
 Usage
 -----
 1. Select the procedure and press "CTRL+6"(OSX - CMD+6) or click on the toolbar icon labeled "Format HANA SQL Script".
