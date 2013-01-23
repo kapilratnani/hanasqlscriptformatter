@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/net.ripper.hana.sqlscriptformatter.feature_1.0.1.alpha.jar" id="net.ripper.hana.sqlscriptformatter.feature" version="1.0.1.alpha">
+      <category name="net.ripper.hana.sqlscript"/>
+   </feature>
+   <category-def name="net.ripper.hana.sqlscript" label="HANA SQL Script Formatter"/>
+</site>
