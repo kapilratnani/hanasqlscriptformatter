@@ -30,3 +30,7 @@ TODO
 2. Fix /**/ style comments inside create proc.
 3. Work on better formatting of subqueries.
 4. Look for alternative ways of formatting, look in the direction of generating a parser and then format using the AST.
+
+Disclaimer
+--------------
+This plugin is not a part of standard SAP HANA delivery package, hence SAP HANA support is not responsible for this plugin in any way. All support queries regarding this plugin should be reported here(https://github.com/kapilratnani/hanasqlscriptformatter). If i've time, i'll fix them.
