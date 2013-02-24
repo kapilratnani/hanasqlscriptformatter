@@ -2,6 +2,7 @@ HANA SQLScript Formatter
 ----------------------
 
 Eclipse plugin for formatting SAP HANA SQLScript. Can be used with SAP HANA Studio.
+Uses SQL Formatter forked from https://github.com/negus/sqlf
 
 Installation
 ------------
